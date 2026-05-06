@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔑 FF API Key Admin Panel</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f0f1a; color: #e0e0e0; min-height: 100vh; }
+
+  /* ── Login Screen ── */
+  #login-screen {
+    display: flex; align-items: center; justify-content: center;
+    height: 100vh; background: linear-gradient(135deg, #0f0f1a, #1a1a2e);
+  }
+  .login-box {
+    background: #1e1e2e; border: 1px solid #ff4444; border-radius: 16px;
+    padding: 40px; width: 360px; text-align: center;
+  }
+  .login-box h2 { color: #ff4444; margin-bottom: 8px; font-size: 24px; }
+  .login-box p  { color: #888; margin-bottom: 24px; font-size: 14px; }
+  .login-box input {
+    width: 100%; padding: 12px 16px; background: #2a2a3e; border: 1px solid #444;
+    border-radius: 8px; color: #fff; font-size: 15px; margin-bottom: 12px;
+  }
+  .login-box input:focus { outline: none; border-color: #ff4444; }
+  .btn-login {
+    width: 100%; padding: 12px; background: #ff4444; color: #fff;
+    border: none; border-radius: 8px; font-size: 16px; cursor: pointer;
+    transition: .2s;
+  }
+  .btn-login:hover { background: #cc0000; }
+  #login-error { color: #ff4444; font-size: 13px; margin-top: 10px; }
+
+  /* ── Main Panel ── */
+  #main-panel { display: none; }
+
+  .header {
+    background: #1e1e2e; border-bottom: 1px solid #333;
+    padding: 16px 24px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .header h1 { font-size: 20px; color: #ff4444; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .btn-logout {
+    padding: 8px 16px; background: #333; color: #ccc;
+    border: none; border-radius: 6px; cursor: pointer; font-size: 13px;
+  }
+
+  .content { padding: 24px; max-width: 1100px; margin: 0 auto; }
+
+  /* ── Stats Cards ── */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  .stat-card {
+    background: #1e1e2e; border: 1px solid #333; border-radius: 12px;
+    padding: 20px; text-align: center;
+  }
+  .stat-card .num { font-size: 32px; font-weight: bold; color: #ff4444; }
+  .stat-card .lbl { font-size: 13px; color: #888; margin-top: 4px; }
+
+  /* ── Create Key Form ── */
+  .create-section {
+    background: #1e1e2e; border: 1px solid #333; border-radius: 12px;
+    padding: 24px; margin-bottom: 28px;
+  }
+  .create-section h2 { font-size: 17px; color: #fff; margin-bottom: 20px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 12px; align-items: end; }
+  .form-group label { font-size: 12px; color: #888; display: block; margin-bottom: 6px; }
+  .form-group input, .form-group select {
+    width: 100%; padding: 10px 12px; background: #2a2a3e; border: 1px solid #444;
+    border-radius: 8px; color: #fff; font-size: 14px;
+  }
+  .form-group input:focus, .form-group select:focus { outline: none; border-color: #ff4444; }
+  .btn-create {
+    padding: 10px 20px; background: #ff4444; color: #fff;
+    border: none; border-radius: 8px; cursor: pointer; font-size: 14px;
+    white-space: nowrap; transition: .2s; height: 40px;
+  }
+  .btn-create:hover { background: #cc0000; }
+
+  /* ── Keys Table ── */
+  .table-section { background: #1e1e2e; border: 1px solid #333; border-radius: 12px; overflow: hidden; }
+  .table-header {
+    padding: 16px 20px; border-bottom: 1px solid #333;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .table-header h2 { font-size: 17px; color: #fff; }
+  .btn-refresh {
+    padding: 7px 14px; background: #2a2a3e; color: #ccc;
+    border: 1px solid #444; border-radius: 6px; cursor: pointer; font-size: 13px;
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    background: #252535; color: #888; font-size: 12px; text-align: left;
+    padding: 12px 16px; text-transform: uppercase; letter-spacing: .5px;
+  }
+  td { padding: 14px 16px; border-bottom: 1px solid #252535; font-size: 14px; }
+  tr:hover td { background: #252535; }
+
+  .key-cell {
+    font-family: monospace; font-size: 13px; color: #7ec8e3;
+    cursor: pointer; user-select: all;
+  }
+  .key-cell:hover { color: #fff; }
+
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+  }
+  .badge-active   { background: #1a3a1a; color: #4caf50; }
+  .badge-disabled { background: #3a1a1a; color: #f44336; }
+  .badge-expired  { background: #3a2a1a; color: #ff9800; }
+
+  .progress-bar {
+    background: #2a2a3e; border-radius: 10px; height: 6px;
+    overflow: hidden; margin-top: 4px; width: 120px;
+  }
+  .progress-fill { height: 100%; border-radius: 10px; transition: .3s; }
+
+  .action-btns { display: flex; gap: 6px; }
+  .btn-sm {
+    padding: 5px 10px; border-radius: 6px; font-size: 12px;
+    cursor: pointer; border: none; transition: .2s;
+  }
+  .btn-toggle  { background: #2a3a2a; color: #4caf50; }
+  .btn-disable { background: #3a2a2a; color: #f44336; }
+  .btn-delete  { background: #3a1a1a; color: #ff5252; }
+  .btn-sm:hover { opacity: .8; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: #1e1e2e; border: 1px solid #ff4444; color: #fff;
+    padding: 12px 20px; border-radius: 8px; font-size: 14px;
+    display: none; z-index: 999; animation: slideIn .3s;
+  }
+  @keyframes slideIn { from { transform: translateX(100px); opacity:0; } to { transform: none; opacity:1; } }
+
+  .empty-state { text-align: center; color: #555; padding: 48px; font-size: 15px; }
+  .loading { text-align: center; color: #888; padding: 32px; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════ LOGIN ══════════════ -->
+<div id="login-screen">
+  <div class="login-box">
+    <h2>🔑 Admin Panel</h2>
+    <p>FF UID Checker — API Key Manager</p>
+    <input type="email"    id="email"    placeholder="Admin Email">
+    <input type="password" id="password" placeholder="Password">
+    <button class="btn-login" onclick="doLogin()">Login</button>
+    <div id="login-error"></div>
+  </div>
+</div>
+
+<!-- ══════════════ MAIN ══════════════ -->
+<div id="main-panel">
+
+  <div class="header">
+    <h1>🔑 API Key Admin Panel</h1>
+    <div class="header-right">
+      <span id="admin-email" style="color:#888; font-size:13px;"></span>
+      <button class="btn-logout" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat-card">
+        <div class="num" id="stat-total">—</div>
+        <div class="lbl">Total Keys</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="stat-active" style="color:#4caf50">—</div>
+        <div class="lbl">Active Keys</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="stat-requests" style="color:#7ec8e3">—</div>
+        <div class="lbl">Total Requests</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="stat-expired" style="color:#ff9800">—</div>
+        <div class="lbl">Expired Keys</div>
+      </div>
+    </div>
+
+    <!-- Create Key -->
+    <div class="create-section">
+      <h2>➕ New API Key বানাও</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Label (কার জন্য)</label>
+          <input type="text" id="f-label" placeholder="e.g. Customer A">
+        </div>
+        <div class="form-group">
+          <label>Request Limit</label>
+          <input type="number" id="f-limit" placeholder="e.g. 1000" value="1000">
+        </div>
+        <div class="form-group">
+          <label>Expiry Date</label>
+          <input type="date" id="f-expiry">
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="f-status">
+            <option value="true">Active ✅</option>
+            <option value="false">Disabled ❌</option>
+          </select>
+        </div>
+        <button class="btn-create" onclick="createKey()">Generate Key</button>
+      </div>
+    </div>
+
+    <!-- Keys Table -->
+    <div class="table-section">
+      <div class="table-header">
+        <h2>🗝️ All API Keys</h2>
+        <button class="btn-refresh" onclick="loadKeys()">🔄 Refresh</button>
+      </div>
+      <div id="table-body">
+        <div class="loading">Loading...</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp }                        from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
+                                                from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+import { getDatabase, ref, get, set, update, remove, onValue }
+                                                from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
+// ── Firebase Config ──────────────────────────────────────────
+const firebaseConfig = {
+  apiKey:            "AIzaSyA_rKYVn_xfVkASFXd2BgfoIZibrstEvPs",
+  authDomain:        "version-7c25f.firebaseapp.com",
+  databaseURL:       "https://version-7c25f-default-rtdb.firebaseio.com",
+  projectId:         "version-7c25f",
+  storageBucket:     "version-7c25f.firebasestorage.app",
+  messagingSenderId: "503361672730",
+  appId:             "1:503361672730:web:5f763bf3134290d52123a3",
+  measurementId:     "G-DZSJZ7SELV"
+};
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getDatabase(app);
+
+// ── Auth State ───────────────────────────────────────────────
+onAuthStateChanged(auth, user => {
+  if (user) {
+    document.getElementById("login-screen").style.display  = "none";
+    document.getElementById("main-panel").style.display    = "block";
+    document.getElementById("admin-email").textContent     = user.email;
+    loadKeys();
+  } else {
+    document.getElementById("login-screen").style.display  = "flex";
+    document.getElementById("main-panel").style.display    = "none";
+  }
+});
+
+// ── Login ────────────────────────────────────────────────────
+window.doLogin = async () => {
+  const email    = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  const errEl    = document.getElementById("login-error");
+  errEl.textContent = "";
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (e) {
+    errEl.textContent = "❌ Wrong email or password";
+  }
+};
+
+// ── Logout ───────────────────────────────────────────────────
+window.doLogout = () => signOut(auth);
+
+// ── Generate Random Key ───────────────────────────────────────
+function generateKey() {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let result  = "vx-";
+  for (let i = 0; i < 20; i++)
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  return result;
+}
+
+// ── Create Key ────────────────────────────────────────────────
+window.createKey = async () => {
+  const label   = document.getElementById("f-label").value.trim() || "Unnamed";
+  const limit   = parseInt(document.getElementById("f-limit").value) || 1000;
+  const expiry  = document.getElementById("f-expiry").value;
+  const active  = document.getElementById("f-status").value === "true";
+
+  if (!expiry) { showToast("❌ Expiry date দাও!"); return; }
+
+  const key     = generateKey();
+  const expTs   = new Date(expiry).getTime() / 1000;
+  const nowTs   = Math.floor(Date.now() / 1000);
+
+  const keyData = {
+    label,
+    created_at:     nowTs,
+    expires_at:     expTs,
+    request_limit:  limit,
+    requests_used:  0,
+    is_active:      active,
+  };
+
+  await set(ref(db, `api_keys/${key}`), keyData);
+
+  showToast(`✅ Key created: ${key}`);
+  // Copy to clipboard
+  navigator.clipboard.writeText(key).catch(() => {});
+  loadKeys();
+};
+
+// ── Load Keys ─────────────────────────────────────────────────
+window.loadKeys = async () => {
+  document.getElementById("table-body").innerHTML = '<div class="loading">Loading...</div>';
+  const snapshot = await get(ref(db, "api_keys"));
+  const data     = snapshot.val() || {};
+  const keys     = Object.entries(data);
+
+  // Stats
+  const now     = Math.floor(Date.now() / 1000);
+  let totalReqs = 0, activeCount = 0, expiredCount = 0;
+  keys.forEach(([k, v]) => {
+    totalReqs += v.requests_used || 0;
+    if (v.is_active && v.expires_at > now) activeCount++;
+    if (v.expires_at <= now) expiredCount++;
+  });
+  document.getElementById("stat-total").textContent    = keys.length;
+  document.getElementById("stat-active").textContent   = activeCount;
+  document.getElementById("stat-requests").textContent = totalReqs;
+  document.getElementById("stat-expired").textContent  = expiredCount;
+
+  if (keys.length === 0) {
+    document.getElementById("table-body").innerHTML =
+      '<div class="empty-state">কোনো API key নেই। উপরে থেকে বানাও! 🔑</div>';
+    return;
+  }
+
+  let html = `
+    <table>
+      <thead>
+        <tr>
+          <th>Label</th>
+          <th>API Key</th>
+          <th>Status</th>
+          <th>Usage</th>
+          <th>Expiry</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  keys.sort((a, b) => b[1].created_at - a[1].created_at);
+
+  keys.forEach(([key, v]) => {
+    const now        = Math.floor(Date.now() / 1000);
+    const expired    = v.expires_at && v.expires_at <= now;
+    const pct        = v.request_limit > 0 ? Math.min(100, Math.round((v.requests_used / v.request_limit) * 100)) : 0;
+    const barColor   = pct > 80 ? "#f44336" : pct > 50 ? "#ff9800" : "#4caf50";
+    const expiryDate = v.expires_at ? new Date(v.expires_at * 1000).toLocaleDateString() : "Never";
+    const createdDate= v.created_at ? new Date(v.created_at * 1000).toLocaleDateString() : "—";
+
+    let statusBadge;
+    if      (expired)        statusBadge = `<span class="badge badge-expired">Expired</span>`;
+    else if (!v.is_active)   statusBadge = `<span class="badge badge-disabled">Disabled</span>`;
+    else                     statusBadge = `<span class="badge badge-active">Active</span>`;
+
+    html += `
+      <tr>
+        <td>${v.label || "—"}</td>
+        <td>
+          <span class="key-cell" title="Click to copy" onclick="copyKey('${key}')">${key}</span>
+        </td>
+        <td>${statusBadge}</td>
+        <td>
+          <div>${v.requests_used || 0} / ${v.request_limit || '∞'}</div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:${pct}%; background:${barColor}"></div>
+          </div>
+        </td>
+        <td style="color:${expired ? '#ff9800' : '#ccc'}">${expiryDate}</td>
+        <td style="color:#888; font-size:13px">${createdDate}</td>
+        <td>
+          <div class="action-btns">
+            ${v.is_active
+              ? `<button class="btn-sm btn-disable" onclick="toggleKey('${key}', false)">Disable</button>`
+              : `<button class="btn-sm btn-toggle"  onclick="toggleKey('${key}', true)">Enable</button>`
+            }
+            <button class="btn-sm btn-delete" onclick="deleteKey('${key}')">Delete</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  });
+
+  html += `</tbody></table>`;
+  document.getElementById("table-body").innerHTML = html;
+};
+
+// ── Copy Key ──────────────────────────────────────────────────
+window.copyKey = key => {
+  navigator.clipboard.writeText(key).then(() => showToast("✅ Copied: " + key));
+};
+
+// ── Toggle Key ────────────────────────────────────────────────
+window.toggleKey = async (key, active) => {
+  await update(ref(db, `api_keys/${key}`), { is_active: active });
+  showToast(active ? "✅ Key enabled!" : "🚫 Key disabled!");
+  loadKeys();
+};
+
+// ── Delete Key ────────────────────────────────────────────────
+window.deleteKey = async key => {
+  if (!confirm(`Delete key?\n${key}`)) return;
+  await remove(ref(db, `api_keys/${key}`));
+  showToast("🗑️ Key deleted!");
+  loadKeys();
+};
+
+// ── Toast ─────────────────────────────────────────────────────
+window.showToast = msg => {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.style.display = "block";
+  setTimeout(() => t.style.display = "none", 3500);
+};
+
+// ── Set default expiry (30 days) ──────────────────────────────
+const d = new Date();
+d.setDate(d.getDate() + 30);
+document.getElementById("f-expiry").value = d.toISOString().split("T")[0];
+</script>
+
+</body>
+</html>
